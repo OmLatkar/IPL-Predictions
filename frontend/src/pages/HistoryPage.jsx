@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useGroup } from '../context/GroupContext';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import GroupSelector from '../components/user/GroupSelector';
+import { socket } from '../services/socket';
 
 export default function HistoryPage() {
   const [completedMatches, setCompletedMatches] = useState([]);
@@ -21,6 +22,22 @@ export default function HistoryPage() {
   useEffect(() => {
     fetchCompletedMatches();
   }, []);
+
+  useEffect(() => {
+    const onMatchCompleted = () => {
+      // Completed list should update instantly
+      fetchCompletedMatches();
+      // If user is viewing results, refresh those too
+      if (selectedGroup && selectedView === 'results') {
+        fetchMatchResults();
+      }
+    };
+
+    socket.on('match-completed', onMatchCompleted);
+    return () => {
+      socket.off('match-completed', onMatchCompleted);
+    };
+  }, [selectedGroup, selectedView]);
 
   useEffect(() => {
     if (selectedGroup && selectedView === 'results') {

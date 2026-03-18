@@ -8,6 +8,7 @@ import { GroupProvider } from './context/GroupContext';
 
 // Layout Components
 import Navbar from './components/common/Navbar';
+import SocketBridge from './components/common/SocketBridge';
 
 // Auth Pages
 import Login from './pages/Login';
@@ -71,6 +72,7 @@ function AppContent() {
   return (
     <div className="min-h-screen w-full bg-gray-100">
       <Navbar />
+      <SocketBridge />
       <main className="w-full min-h-[calc(100vh-4rem)] px-4 sm:px-6 lg:px-8 py-6">
         <Routes>
           {/* Public Routes */}

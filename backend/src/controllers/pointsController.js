@@ -135,7 +135,9 @@ const declareWinner = async (req, res, next) => {
     // Notify about match completion
     io.emit('match-completed', {
       matchId,
+      status: updatedMatch.status,
       winningTeam,
+      match: updatedMatch,
       results: matchResults
     });
 

@@ -74,6 +74,12 @@ const createMatch = async (req, res, next) => {
     const io = req.app.get('io');
     io.emit('new-match', match);
 
+    // Schedule voting-closed event for this match
+    const votingScheduler = req.app.get('votingScheduler');
+    if (votingScheduler?.scheduleVotingClosed) {
+      votingScheduler.scheduleVotingClosed(match);
+    }
+
     res.status(201).json({
       status: 'success',
       data: {

@@ -6,6 +6,7 @@ import { matchesAPI, pointsAPI } from '../services/api';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { IPL_TEAMS, TOAST_MESSAGES } from '../utils/constants';
 import toast from 'react-hot-toast';
+import { socket } from '../services/socket';
 
 export default function AdminMatches() {
   const [searchParams] = useSearchParams();
@@ -26,6 +27,49 @@ export default function AdminMatches() {
 
   useEffect(() => {
     fetchMatches();
+  }, []);
+
+  useEffect(() => {
+    const upsertMatch = (incoming) => {
+      if (!incoming?.id) return;
+      setMatches((prev) => {
+        const idx = prev.findIndex(m => m.id === incoming.id);
+        if (idx === -1) return [incoming, ...prev];
+        const next = [...prev];
+        next[idx] = { ...next[idx], ...incoming };
+        return next;
+      });
+    };
+
+    const onNewMatch = (match) => upsertMatch(match);
+    const onMatchUpdated = (match) => upsertMatch(match);
+    const onMatchDeleted = (matchId) => setMatches(prev => prev.filter(m => m.id !== matchId));
+    const onMatchCompleted = ({ matchId, winningTeam, match }) => {
+      setMatches(prev => prev.map(m => (
+        m.id === matchId
+          ? { ...m, ...match, status: 'complete', winningTeam, isVotingOpen: false, timeRemaining: 0 }
+          : m
+      )));
+    };
+    const onVotingClosed = ({ matchId }) => {
+      setMatches(prev => prev.map(m => (
+        m.id === matchId ? { ...m, isVotingOpen: false, timeRemaining: 0 } : m
+      )));
+    };
+
+    socket.on('new-match', onNewMatch);
+    socket.on('match-updated', onMatchUpdated);
+    socket.on('match-deleted', onMatchDeleted);
+    socket.on('match-completed', onMatchCompleted);
+    socket.on('voting-closed', onVotingClosed);
+
+    return () => {
+      socket.off('new-match', onNewMatch);
+      socket.off('match-updated', onMatchUpdated);
+      socket.off('match-deleted', onMatchDeleted);
+      socket.off('match-completed', onMatchCompleted);
+      socket.off('voting-closed', onVotingClosed);
+    };
   }, []);
 
   useEffect(() => {

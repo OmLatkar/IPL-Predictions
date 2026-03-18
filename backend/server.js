@@ -9,6 +9,7 @@ dotenv.config();
 
 const app = require('./src/app');
 const { setupSocketHandlers } = require('./src/sockets/socketHandlers');
+const { createVotingScheduler } = require('./src/sockets/votingScheduler');
 
 // Create HTTP server
 const httpServer = createServer(app);
@@ -26,6 +27,13 @@ setupSocketHandlers(io);
 
 // Store io instance in app for use in controllers
 app.set('io', io);
+
+// Voting deadline scheduler (emits voting-closed)
+const votingScheduler = createVotingScheduler({ io, prisma: app.get('prisma') });
+app.set('votingScheduler', votingScheduler);
+votingScheduler.scheduleAllPending().catch((err) => {
+  console.error('Failed to schedule pending voting deadlines', err);
+});
 
 // Start server
 const PORT = process.env.PORT || 5000;
