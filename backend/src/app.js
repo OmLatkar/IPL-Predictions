@@ -4,7 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
 
-// Import routes (comment out ones that don't exist yet)
+// Import routes
 const authRoutes = require('./routes/authRoutes');
 const groupRoutes = require('./routes/groupRoutes');
 const matchRoutes = require('./routes/matchRoutes');
@@ -27,12 +27,33 @@ const prisma = new PrismaClient({
 // Make prisma available to routes
 app.set('prisma', prisma);
 
-// CORS must come BEFORE routes
+// Get allowed origins - support multiple if needed
+const allowedOrigins = process.env.FRONTEND_URL 
+  ? [process.env.FRONTEND_URL, 'http://localhost:5173', 'http://localhost:3000']
+  : ['http://localhost:5173'];
+
+// Log CORS configuration on startup (for debugging)
+console.log('CORS allowed origins:', allowedOrigins);
+
+// CORS configuration
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('CORS blocked origin:', origin);
+      callback(null, true); // TEMPORARY: allow all for debugging
+      // Remove the line above and uncomment below after confirming it works
+      // callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // Handle preflight requests
@@ -50,11 +71,31 @@ if (process.env.NODE_ENV === 'development') {
   });
 }
 
+// Log all requests in production for debugging (optional - remove after CORS fixed)
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.url} - Origin: ${req.headers.origin || 'no origin'}`);
+  next();
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'success',
     message: 'Server is running',
+    timestamp: new Date().toISOString(),
+    cors: {
+      allowedOrigins: allowedOrigins,
+      requestOrigin: req.headers.origin || 'none'
+    }
+  });
+});
+
+// Test CORS endpoint
+app.get('/api/test', (req, res) => {
+  res.status(200).json({
+    status: 'success',
+    message: 'CORS is working!',
+    origin: req.headers.origin || 'none',
     timestamp: new Date().toISOString()
   });
 });
