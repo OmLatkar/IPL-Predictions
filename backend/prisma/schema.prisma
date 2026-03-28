@@ -7,6 +7,7 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
   // For Supabase, we don't use shadow database
   // shadowDatabaseUrl = env("SHADOW_DATABASE_URL") // Comment this out
 }
